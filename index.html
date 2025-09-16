@@ -253,7 +253,6 @@
                     <div class="form-grid">
                         <div class="form-group"><label>상품명 *</label><input type="text" id="productName" required placeholder="실제 상품명" /></div>
                         <div class="form-group"><label>기본 원가 *</label><input type="number" id="productCost" required placeholder="기본 원가" /></div>
-                        <div class="form-group"><label>카테고리</label><input type="text" id="productCategory" placeholder="카테고리" /></div>
                         <div class="form-group"><label>플랫폼 *</label><select id="productPlatform" required></select></div>
                         <div class="form-group"><label>플랫폼별 판매가 *</label><input type="number" id="productPrice" required placeholder="판매가" /></div>
                     </div>
@@ -280,7 +279,7 @@
             </div>
             <div class="card">
                 <h3>📊 상품 일괄 등록</h3>
-                <p>포맷: 실제상품명, 기본원가, 권장판매가, 카테고리, 매칭상품명</p>
+                <p>포맷: 실제상품명, 기본원가, 권장판매가, 매칭상품명</p>
                 <button class="btn btn-secondary" id="downloadProductTemplateBtn">📥 템플릿 다운로드</button>
                 <div class="upload-area" id="productUploadArea"><p>📁 상품 엑셀 파일을 드래그하거나 클릭하여 업로드</p><input type="file" id="productExcelFile" accept=".xlsx,.xls,.csv" style="display:none;" /></div>
                 <button class="btn" id="chooseProductFile">📁 파일 선택</button>
@@ -290,7 +289,7 @@
                 <h3>📦 상품 목록</h3>
                 <div class="table-container">
                     <table id="productTable">
-                        <thead><tr><th>상품명</th><th>플랫폼</th><th>카테고리</th><th>원가</th><th>판매가</th><th>예상 수익률</th><th>관리</th></tr></thead>
+                        <thead><tr><th>상품명</th><th>플랫폼</th><th>원가</th><th>판매가</th><th>예상 수익률</th><th>관리</th></tr></thead>
                         <tbody id="productTableBody"></tbody>
                     </table>
                 </div>
@@ -672,7 +671,6 @@
                 business_number: currentUser.businessNumber,
                 name: document.getElementById('productName').value,
                 cost: parseFloat(document.getElementById('productCost').value),
-                category: document.getElementById('productCategory').value || '',
                 platform: document.getElementById('productPlatform').value,
                 price: parseFloat(document.getElementById('productPrice').value),
                 matching: matchingLines
@@ -770,7 +768,6 @@
                 tr.innerHTML = `
                     <td>${product.name || ''}</td>
                     <td>${product.platform || ''}</td>
-                    <td>${product.category || ''}</td>
                     <td>${fmtKRW(product.cost || 0)}</td>
                     <td>${fmtKRW(product.price || 0)}</td>
                     <td style="color:${expectedProfitRate >= 0 ? '#16a34a' : '#ef4444'}; font-weight:700;">${expectedProfitRate.toFixed(1)}%</td>
