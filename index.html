@@ -373,6 +373,27 @@
 
         // 유틸
         const fmtKRW = (n) => `₩${Math.round(n || 0).toLocaleString()}`;
+        const unique = (arr) => Array.from(new Set(arr));
+
+        // 상품 검증 유틸: 플랫폼/매칭까지 고려해 등록 여부 확인
+        function isKnownProductName(inputName, platformOpt) {
+            const name = (inputName || '').trim();
+            if (!name) return false;
+            return productData.some(p => {
+                if ((p.name || '') === name && (!platformOpt || p.platform === platformOpt)) return true;
+                if (!Array.isArray(p.matching)) return false;
+                return p.matching.some(m => {
+                    const raw = (m || '').trim();
+                    if (!raw) return false;
+                    if (raw.includes(':')) {
+                        const [plat, alias] = raw.split(':');
+                        if (platformOpt) return plat === platformOpt && alias === name;
+                        return alias === name || raw === name;
+                    }
+                    return raw === name;
+                });
+            });
+        }
 
         // 모달
         function showModal(title, message) {
@@ -619,6 +640,13 @@
                 fee_percent: feePercent === '' ? null : parseFloat(feePercent),
                 registered_at: new Date().toISOString()
             };
+            // 미등록 상품명 검증
+            const platformName = rec.platform;
+            const productKnown = isKnownProductName(rec.product_name, platformName);
+            if (!productKnown) {
+                showModal('확인 필요', `상품 관리에 등록되지 않은 상품명입니다: "${rec.product_name}"`);
+                return;
+            }
             const { error } = await supabaseClient.from('sales').insert([rec]);
             if (error) { showModal('오류', '매출 등록 실패'); return; }
             (document.getElementById('salesForm')).reset();
@@ -974,7 +1002,42 @@
             productUploadArea.addEventListener('drop', (e)=>{ e.preventDefault(); productUploadArea.classList.remove('dragover'); if (e.dataTransfer.files.length>0) productFileInput.files = e.dataTransfer.files; });
             productFileInput.addEventListener('change', (e)=>{ const f=e.target.files[0]; if (f) productUploadArea.querySelector('p').textContent = `선택된 파일: ${f.name}`; });
         }
-        function processSalesExcel() { const fi=document.getElementById('salesExcelFile'); if (!fi.files[0]) { showModal('오류','파일을 선택해주세요.'); return; } showModal('처리중','엑셀 파일을 처리하고 있습니다...'); setTimeout(()=>{ showModal('성공','엑셀 파일이 성공적으로 처리되었습니다.'); fi.value=''; document.querySelector('#salesUploadArea p').textContent='📁 엑셀 파일을 드래그하거나 클릭하여 업로드'; }, 1200); }
+        function processSalesExcel() {
+            const fi = document.getElementById('salesExcelFile');
+            if (!fi.files[0]) { showModal('오류','파일을 선택해주세요.'); return; }
+            // 실제 파서는 미구현 상태이므로, 여기서는 CSV 가정 및 간단 파싱 예시를 제시합니다.
+            const file = fi.files[0];
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const text = reader.result || '';
+                    // 간단 CSV 가정: 첫 줄 헤더, 이후 컬럼에 온라인상품명/플랫폼 존재
+                    const lines = text.split(/\r?\n/).filter(l=>l.trim());
+                    if (lines.length < 2) { showModal('오류','데이터 행이 없습니다.'); return; }
+                    const header = lines[0].split(',').map(h=>h.trim());
+                    const nameIdx = header.findIndex(h => /(상품명|온라인상품명)/.test(h));
+                    const platIdx = header.findIndex(h => /(쇼핑몰|플랫폼)/.test(h));
+                    const unknowns = [];
+                    for (let i=1;i<lines.length;i++) {
+                        const cols = lines[i].split(',');
+                        const pname = (cols[nameIdx] || '').trim();
+                        const pplat = (cols[platIdx] || '').trim();
+                        if (!isKnownProductName(pname, pplat)) unknowns.push(`${pplat ? pplat+':' : ''}${pname}`);
+                    }
+                    if (unknowns.length) {
+                        showModal('확인 필요', `등록되지 않은 상품명: \n- ${unique(unknowns).join('\n- ')}`);
+                        return;
+                    }
+                    showModal('성공','엑셀 파일이 성공적으로 검증되었습니다.');
+                } catch (e) {
+                    showModal('오류','파일 검증 중 오류가 발생했습니다.');
+                } finally {
+                    fi.value='';
+                    document.querySelector('#salesUploadArea p').textContent='📁 엑셀 파일을 드래그하거나 클릭하여 업로드';
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
         function processProductExcel() { const fi=document.getElementById('productExcelFile'); if (!fi.files[0]) { showModal('오류','파일을 선택해주세요.'); return; } showModal('처리중','상품 엑셀 파일을 처리하고 있습니다...'); setTimeout(()=>{ showModal('성공','상품이 성공적으로 등록되었습니다.'); fi.value=''; document.querySelector('#productUploadArea p').textContent='📁 상품 엑셀 파일을 드래그하거나 클릭하여 업로드'; updateProductTable(); }, 1200); }
         function downloadProductTemplate() { const csv = "실제상품명,기본원가,권장판매가,카테고리,매칭상품명\n무선이어폰,30000,59000,전자제품,쿠팡:블루투스 무선 이어폰;11번가:무선 이어폰\n스마트워치,80000,150000,전자제품,쿠팡:스마트워치;11번가:스마트워치 GPS"; const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a'); const url=URL.createObjectURL(blob); link.href=url; link.download='상품등록_템플릿.csv'; link.style.visibility='hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
     </script>
