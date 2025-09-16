@@ -544,7 +544,7 @@
                     <td>${platform.name}</td>
                     <td>${platform.fee}%</td>
                     <td>
-                        <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="alert('수정은 테이블 직접 편집 기능은 추후 제공됩니다.')">수정</button>
+                        <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="editPlatform(${index})">수정</button>
                         <button class="btn" style="padding:6px 10px; font-size:12px; background:#f56565; color:#fff;" onclick="deletePlatform(${index})">삭제</button>
                     </td>`;
             });
@@ -629,6 +629,30 @@
             updateSalesTable();
             updateDashboard();
             showModal('성공', '매출이 등록되었습니다!');
+        }
+
+        // 플랫폼 수정
+        async function editPlatform(index) {
+            const row = platformData[index]; if (!row) return;
+            const newName = prompt('플랫폼명을 입력하세요', row.name);
+            if (newName === null) return;
+            const feeStr = prompt('기본 수수료(%)를 입력하세요', String(row.fee));
+            if (feeStr === null) return;
+            const newFee = parseFloat(feeStr);
+            if (!newName.trim() || isNaN(newFee)) { showModal('오류', '올바른 값이 아닙니다.'); return; }
+            // 동일명 중복 체크(자신 제외)
+            if (platformData.some((p, i) => i !== index && p.name === newName.trim())) {
+                showModal('오류', '이미 존재하는 플랫폼명입니다.');
+                return;
+            }
+            const { error } = await supabaseClient
+                .from('platforms')
+                .update({ name: newName.trim(), fee: newFee })
+                .eq('id', row.id)
+                .eq('business_number', currentUser.businessNumber);
+            if (error) { showModal('오류', '수정에 실패했습니다.'); return; }
+            await reloadAllData();
+            showModal('성공', '플랫폼이 수정되었습니다.');
         }
         async function deleteSale(index) {
             const row = salesData.slice(-50).reverse()[index];
