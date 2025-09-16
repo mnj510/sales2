@@ -1,0 +1,50 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject Supabase env
+        run: |
+          URL_ESCAPED=$(printf '%s' "${{ secrets.SUPABASE_URL }}" | sed -e 's/[\&/]/\\&/g')
+          KEY_ESCAPED=$(printf '%s' "${{ secrets.SUPABASE_ANON_KEY }}" | sed -e 's/[\&/]/\\&/g')
+          sed -i.bak "s/YOUR_SUPABASE_URL/$URL_ESCAPED/" env.js
+          sed -i.bak "s/YOUR_SUPABASE_ANON_KEY/$KEY_ESCAPED/" env.js
+          rm -f env.js.bak
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
