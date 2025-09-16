@@ -89,11 +89,18 @@
         let supabaseClient = null;
         function initSupabase() {
             if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-                console.error('Supabase 환경변수가 없습니다. env.js를 확인하세요.');
+                console.warn('Supabase 환경변수가 없습니다. 로컬 저장소 모드로 동작합니다.');
                 return null;
             }
             return window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
         }
+        const isSupabaseReady = () => !!(supabaseClient && window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+
+        // 로컬 스토리지 헬퍼
+        const ls = {
+            get(key, fallback) { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } },
+            set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+        };
     </script>
 </head>
 <body>
@@ -464,8 +471,27 @@
             document.getElementById('mainSystem').style.display = 'block';
             document.getElementById('displayBusinessName').textContent = currentUser.businessName;
             initializeDateFilter();
-            await ensureDefaultPlatforms();
-            await reloadAllData();
+            if (isSupabaseReady()) {
+                await ensureDefaultPlatforms();
+                await reloadAllData();
+            } else {
+                // 로컬 모드 초기 로드
+                platformData = ls.get('platformData', []);
+                if (platformData.length === 0) {
+                    platformData = [
+                        { id: Date.now(), name: '쿠팡', fee: 8.8 },
+                        { id: Date.now()+1, name: '11번가', fee: 9.0 },
+                        { id: Date.now()+2, name: '지마켓', fee: 9.5 },
+                        { id: Date.now()+3, name: '옥션', fee: 9.5 },
+                        { id: Date.now()+4, name: '네이버스토어팜', fee: 5.5 }
+                    ];
+                    ls.set('platformData', platformData);
+                }
+                salesData = ls.get('salesData', []);
+                productData = ls.get('productData', []);
+                expenseData = ls.get('expenseData', []);
+                updatePlatformSelects();
+            }
             updateAllTables();
             updateDashboard();
         }
@@ -490,6 +516,14 @@
 
         // Supabase CRUD helpers
         async function reloadAllData() {
+            if (!isSupabaseReady()) {
+                salesData = ls.get('salesData', []);
+                productData = ls.get('productData', []);
+                platformData = ls.get('platformData', []);
+                expenseData = ls.get('expenseData', []);
+                updatePlatformSelects();
+                return;
+            }
             const bn = currentUser.businessNumber;
             const [salesRes, productRes, platformRes, expenseRes] = await Promise.all([
                 supabaseClient.from('sales').select('*').eq('business_number', bn).order('date', { ascending: true }),
@@ -509,6 +543,7 @@
         }
 
         async function ensureDefaultPlatforms() {
+            if (!isSupabaseReady()) return; // 로컬 모드는 postLogin에서 처리
             const bn = currentUser.businessNumber;
             const { data, error } = await supabaseClient.from('platforms').select('id').eq('business_number', bn).limit(1);
             if (error) { console.error(error); return; }
@@ -541,19 +576,33 @@
             const fee = parseFloat(document.getElementById('newPlatformFee').value);
             if (!name || isNaN(fee)) { showModal('오류', '플랫폼명과 수수료를 입력해주세요.'); return; }
             if (platformData.find(p => p.name === name)) { showModal('오류', '이미 존재하는 플랫폼입니다.'); return; }
-            const { error } = await supabaseClient.from('platforms').insert([{ name, fee, business_number: currentUser.businessNumber }]);
-            if (error) { showModal('오류', '플랫폼 추가 실패'); return; }
+            if (isSupabaseReady()) {
+                const { error } = await supabaseClient.from('platforms').insert([{ name, fee, business_number: currentUser.businessNumber }]);
+                if (error) { showModal('오류', '플랫폼 추가 실패'); return; }
+                await reloadAllData();
+            } else {
+                // 로컬 저장
+                const newRow = { id: Date.now(), name, fee };
+                platformData.push(newRow);
+                ls.set('platformData', platformData);
+                updatePlatformSelects();
+            }
             document.getElementById('newPlatformName').value = '';
             document.getElementById('newPlatformFee').value = '';
-            await reloadAllData();
             showModal('성공', '플랫폼이 추가되었습니다.');
         });
         async function deletePlatform(index) {
             const row = platformData[index]; if (!row) return;
             if (!confirm('플랫폼을 삭제하시겠습니까?')) return;
-            const { error } = await supabaseClient.from('platforms').delete().eq('id', row.id).eq('business_number', currentUser.businessNumber);
-            if (error) { showModal('오류', '삭제 실패'); return; }
-            await reloadAllData();
+            if (isSupabaseReady()) {
+                const { error } = await supabaseClient.from('platforms').delete().eq('id', row.id).eq('business_number', currentUser.businessNumber);
+                if (error) { showModal('오류', '삭제 실패'); return; }
+                await reloadAllData();
+            } else {
+                platformData.splice(index, 1);
+                ls.set('platformData', platformData);
+                updatePlatformSelects();
+            }
         }
         function updatePlatformTable() {
             const tbody = document.getElementById('platformTableBody');
@@ -672,13 +721,19 @@
                 showModal('오류', '이미 존재하는 플랫폼명입니다.');
                 return;
             }
-            const { error } = await supabaseClient
-                .from('platforms')
-                .update({ name: newName.trim(), fee: newFee })
-                .eq('id', row.id)
-                .eq('business_number', currentUser.businessNumber);
-            if (error) { showModal('오류', '수정에 실패했습니다.'); return; }
-            await reloadAllData();
+            if (isSupabaseReady()) {
+                const { error } = await supabaseClient
+                    .from('platforms')
+                    .update({ name: newName.trim(), fee: newFee })
+                    .eq('id', row.id)
+                    .eq('business_number', currentUser.businessNumber);
+                if (error) { showModal('오류', '수정에 실패했습니다.'); return; }
+                await reloadAllData();
+            } else {
+                platformData[index] = { ...row, name: newName.trim(), fee: newFee };
+                ls.set('platformData', platformData);
+                updatePlatformSelects();
+            }
             showModal('성공', '플랫폼이 수정되었습니다.');
         }
         async function deleteSale(index) {
