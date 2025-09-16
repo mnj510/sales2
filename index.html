@@ -23,7 +23,7 @@
         .form-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 500; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 2px solid #e1e5e9; border-radius: 10px; font-size: 16px; transition: border-color 0.3s ease; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #667eea; }
-        .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 600; transition: transform 0.3s ease, box-shadow 0.3s ease; margin: 5px; }
+        .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 600; transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease; margin: 5px; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .btn-secondary { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .btn-success { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
@@ -47,7 +47,8 @@
         .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
         .section-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; }
         .section-title { font-size: 1.4rem; font-weight: 700; color: #2d3748; }
-        .card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 14px; padding: 18px; margin-bottom: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.2); }
+        .card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 14px; padding: 18px; margin-bottom: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.2); transition: box-shadow 0.25s ease, transform 0.25s ease; }
+        .card:hover { box-shadow: 0 14px 32px rgba(0,0,0,0.12); transform: translateY(-2px); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
         .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 18px; border-radius: 14px; text-align: center; box-shadow: 0 10px 25px rgba(102, 126, 234, 0.25); }
         .stat-value { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
@@ -196,25 +197,24 @@
                         <div class="form-group"><label>플랫폼 *</label><select id="salesPlatform" required></select></div>
                         <div class="form-group">
                             <label>상품명 *</label>
-                            <input type="text" id="salesProductName" placeholder="상품명 입력 (자동완성)" required />
-                            <div id="productSuggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 220px; overflow-y: auto; width: 100%; z-index: 10;"></div>
+                            <input type="text" id="salesProductName" placeholder="상품명 또는 매칭명으로 검색" required />
+                            <div id="productSuggestions" style="display:none; position:absolute; background:#fff; border:1px solid #ddd; border-radius:10px; max-height:240px; overflow-y:auto; width:100%; z-index:10;"></div>
                         </div>
+                        <div class="form-group"><label>옵션명</label><input type="text" id="salesOption" placeholder="옵션명 (선택)" /></div>
                         <div class="form-group"><label>판매가 *</label><input type="number" id="salesPrice" placeholder="판매가" required /></div>
-                        <div class="form-group"><label>수량 *</label><input type="number" id="salesQuantity" value="1" min="1" required /></div>
-                        <div class="form-group"><label>원가</label><input type="number" id="salesCost" placeholder="원가" /></div>
                         <div class="form-group"><label>배송비</label><input type="number" id="salesShipping" value="0" /></div>
+                        <div class="form-group"><label>수수료(%)</label><input type="number" id="salesFeePercent" step="0.1" placeholder="플랫폼 기본값 자동 반영 / 수동 가능" /></div>
                         <div class="form-group"><label>판매일 *</label><input type="date" id="salesDate" required /></div>
-                        <div class="form-group"><label>옵션명</label><input type="text" id="salesOption" placeholder="옵션명 (선택사항)" /></div>
-                        <div class="form-group"><label>주문번호</label><input type="text" id="salesOrderNumber" placeholder="주문번호 (선택사항)" /></div>
+                        <div class="form-group"><label>주문번호</label><input type="text" id="salesOrderNumber" placeholder="주문번호 (선택)" /></div>
                     </div>
                     <div class="calculation-panel">
                         <h4>💰 실시간 계산</h4>
-                        <div class="calc-row"><span>총 매출:</span><span id="calcTotalSales">₩0</span></div>
+                        <div class="calc-row"><span>매출(판매가):</span><span id="calcTotalSales">₩0</span></div>
                         <div class="calc-row"><span>부가세 (10%):</span><span id="calcVAT">₩0</span></div>
                         <div class="calc-row"><span>수수료:</span><span id="calcFee">₩0</span></div>
-                        <div class="calc-row"><span>총 비용:</span><span id="calcTotalCost">₩0</span></div>
-                        <div class="calc-row total"><span>순익:</span><span id="calcProfit">₩0</span></div>
-                        <div class="calc-row"><span>수익률:</span><span id="calcProfitRate">0%</span></div>
+                        <div class="calc-row"><span>배송비:</span><span id="calcShip">₩0</span></div>
+                        <div class="calc-row total"><span>순익(추정):</span><span id="calcProfit">₩0</span></div>
+                        <div class="calc-row"><span>수익률(추정):</span><span id="calcProfitRate">0%</span></div>
                     </div>
                     <button type="submit" class="btn btn-success">💾 매출 등록</button>
                 </form>
@@ -554,10 +554,12 @@
         function searchProducts(query) {
             const suggestions = document.getElementById('productSuggestions');
             if (!query || query.length < 1) { suggestions.style.display = 'none'; return; }
-            const matches = productData.filter(product =>
-                (product.name || '').toLowerCase().includes(query.toLowerCase()) ||
-                (product.matching && product.matching.join ? product.matching.join(' ').toLowerCase().includes(query.toLowerCase()) : false)
-            );
+            const q = query.toLowerCase();
+            const matches = productData.filter(product => {
+                const n = (product.name || '').toLowerCase();
+                const m = Array.isArray(product.matching) ? product.matching.map(x => (x||'').toLowerCase()).join(' ') : '';
+                return n.includes(q) || m.includes(q);
+            });
             if (matches.length > 0) {
                 suggestions.innerHTML = matches.map(product =>
                     `<div onclick="selectProduct('${(product.name || '').replace(/'/g, "\'")}')" style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">${product.name} (${product.platform}) - ${fmtKRW(product.price)}</div>`
@@ -569,9 +571,11 @@
             const product = productData.find(p => p.name === productName);
             if (product) {
                 document.getElementById('salesProductName').value = product.name || '';
-                document.getElementById('salesPrice').value = product.price || 0;
-                document.getElementById('salesCost').value = product.cost || 0;
                 document.getElementById('salesPlatform').value = product.platform || '';
+                document.getElementById('salesPrice').value = product.price || 0;
+                // 플랫폼 기본 수수료 자동 반영
+                const pf = platformData.find(p => p.name === product.platform);
+                document.getElementById('salesFeePercent').value = pf ? pf.fee : '';
                 calculateSales();
             }
             document.getElementById('productSuggestions').style.display = 'none';
@@ -580,22 +584,20 @@
         // 계산
         function calculateSales() {
             const price = parseFloat(document.getElementById('salesPrice').value) || 0;
-            const quantity = parseInt(document.getElementById('salesQuantity').value) || 1;
-            const cost = parseFloat(document.getElementById('salesCost').value) || 0;
             const shipping = parseFloat(document.getElementById('salesShipping').value) || 0;
             const platform = document.getElementById('salesPlatform').value;
-            const totalSales = price * quantity;
-            const vat = totalSales * 0.1;
-            const totalCost = (cost * quantity) + shipping;
+            const manualFeePercent = document.getElementById('salesFeePercent').value;
             const platformInfo = platformData.find(p => p.name === platform);
-            const feeRate = platformInfo ? (platformInfo.fee / 100) : 0;
-            const fee = totalSales * feeRate;
-            const profit = totalSales - vat - totalCost - fee;
+            const feeRate = (manualFeePercent !== '' ? parseFloat(manualFeePercent) : (platformInfo ? platformInfo.fee : 0)) / 100;
+            const totalSales = price;
+            const vat = totalSales * 0.1;
+            const fee = totalSales * (isNaN(feeRate) ? 0 : feeRate);
+            const profit = totalSales - vat - shipping - fee; // 간소화된 추정
             const profitRate = totalSales > 0 ? (profit / totalSales * 100) : 0;
             document.getElementById('calcTotalSales').textContent = fmtKRW(totalSales);
             document.getElementById('calcVAT').textContent = fmtKRW(vat);
             document.getElementById('calcFee').textContent = fmtKRW(fee);
-            document.getElementById('calcTotalCost').textContent = fmtKRW(totalCost);
+            document.getElementById('calcShip').textContent = fmtKRW(shipping);
             document.getElementById('calcProfit').textContent = fmtKRW(profit);
             document.getElementById('calcProfitRate').textContent = `${profitRate.toFixed(1)}%`;
         }
@@ -603,17 +605,19 @@
         // 매출 등록
         async function handleSalesSubmit(e) {
             e.preventDefault();
+            const feePercent = document.getElementById('salesFeePercent').value;
             const rec = {
                 business_number: currentUser.businessNumber,
                 date: document.getElementById('salesDate').value,
                 platform: document.getElementById('salesPlatform').value,
                 product_name: document.getElementById('salesProductName').value,
                 price: parseFloat(document.getElementById('salesPrice').value),
-                quantity: parseInt(document.getElementById('salesQuantity').value),
-                cost: parseFloat(document.getElementById('salesCost').value) || 0,
+                quantity: 1,
+                cost: 0,
                 shipping: parseFloat(document.getElementById('salesShipping').value) || 0,
                 option: document.getElementById('salesOption').value || '',
                 order_number: document.getElementById('salesOrderNumber').value || '',
+                fee_percent: feePercent === '' ? null : parseFloat(feePercent),
                 registered_at: new Date().toISOString()
             };
             const { error } = await supabaseClient.from('sales').insert([rec]);
